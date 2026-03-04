@@ -1,121 +1,215 @@
-🧠 LASRMIS
-LLM-Assisted Structured Radiology Reporting from MRI Segmentation
-A Training-Free Explainability Layer for Medical Imaging AI
+<div align="center">
 
-📌 Overview
-LASRMIS is a research-oriented pipeline that converts quantitative prostate MRI segmentation outputs into structured, radiology-style clinical reports using prompt-engineered Large Language Models (LLMs).
+```
+██╗      █████╗ ███████╗██████╗ ███╗   ███╗██╗███████╗
+██║     ██╔══██╗██╔════╝██╔══██╗████╗ ████║██║██╔════╝
+██║     ███████║███████╗██████╔╝██╔████╔██║██║███████╗
+██║     ██╔══██║╚════██║██╔══██╗██║╚██╔╝██║██║╚════██║
+███████╗██║  ██║███████║██║  ██║██║ ╚═╝ ██║██║███████║
+╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝╚══════╝
+```
 
-Segmentation models produce precise volumetric outputs, but their numerical results are not directly interpretable for clinical communication. LASRMIS bridges this gap by transforming structured segmentation metrics into clinically formatted narratives using LLaMA 3.1 via the Groq API.
+### **LLM-Assisted Structured Reporting from Medical Image Segmentation**
+*A Prompt Ablation Study on Prostate MRI*
 
-This framework demonstrates how prompt engineering can serve as a lightweight explainability layer for medical AI systems — without retraining segmentation models.
+<br/>
 
-🎯 Key Contributions
-Automatic extraction of lesion volume and zonal metrics from segmentation masks
+[![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![LLaMA 3.1](https://img.shields.io/badge/LLM-LLaMA%203.1-0467DF?style=for-the-badge&logo=meta&logoColor=white)](https://groq.com)
+[![Groq](https://img.shields.io/badge/API-Groq-F55036?style=for-the-badge&logo=groq&logoColor=white)](https://groq.com)
+[![Dataset](https://img.shields.io/badge/Dataset-Medical%20Decathlon-27AE60?style=for-the-badge)](http://medicaldecathlon.com)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+[![Paper](https://img.shields.io/badge/Paper-Springer%20LNCS-B31B1B?style=for-the-badge&logo=arxiv&logoColor=white)](#citation)
 
-Structured LLM-based clinical report generation
+<br/>
 
-Three-level prompt ablation study:
+> *Segmentation models produce numbers. Clinicians need narratives.*
+> **LASRMIS bridges that gap — no retraining required.**
 
-Prompt A: Minimal raw metrics
+<br/>
 
-Prompt B: Structured clinical format
+</div>
 
-Prompt C: Full contextual radiologist-style instructions
+---
 
-Quantitative evaluation using:
+## 🔬 What is LASRMIS?
 
-Clinical completeness scoring (10 diagnostic elements)
+LASRMIS is a **training-free pipeline** that takes the numerical output of prostate MRI segmentation — lesion volumes, anatomical zones, PI-RADS indicators — and converts them into **structured, radiology-style clinical reports** using large language model prompting.
 
-Flesch readability analysis
+The key research question this work answers:
 
-System architecture visualization
+> **Does prompt design affect clinical report quality — and by how much?**
 
-Reproducible and modular pipeline
+The answer, measured across **96 generated reports from 32 cases**:
 
-🏥 Dataset
-Medical Segmentation Decathlon — Task05 Prostate
+<br/>
 
-Multi-modal MRI (T2-weighted + ADC)
+<div align="center">
 
-32 cases
+| Prompt Strategy | Completeness ↑ | Flesch Score | Avg. Words |
+|:---|:---:|:---:|:---:|
+| 🔴 Minimal &nbsp;*(Prompt A)* | 35.6 ± 10.9% | 39.5 | 240.8 |
+| 🟡 Structured &nbsp;*(Prompt B)* | 76.9 ± 8.1% | 24.5 | 191.7 |
+| 🟢 **Full-Context** &nbsp;*(Prompt C)* | **87.8 ± 5.4%** | **22.2** | **207.6** |
 
-NIfTI format
+*All pairwise differences significant at p < 0.01*
 
-Manual segmentation annotations (Peripheral zone + Transition zone)
+</div>
 
-⚙️ Pipeline Architecture
-text
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   MRI + Mask    │ → │   Feature       │ → │   Prompt        │
-│   Loading       │    │   Extraction    │    │   Construction  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                                       │
-                                                       ↓
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Report        │ ← │   LLM           │ ← │   Prompt        │
-│   Generation    │    │   Inference     │    │   Templates     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-        │
-        ↓
-┌─────────────────┐    ┌─────────────────┐
-│   Evaluation    │ → │   Results       │
-│   (Completeness │    │   Visualization │
-│    + Readability│    └─────────────────┘
-└─────────────────┘
-Detailed Steps:
-Data Loading – Load MRI and segmentation masks (NIfTI format) from MSD Task05 Prostate dataset
+<br/>
 
-Feature Extraction – Extract quantitative metrics:
+---
 
-Total prostate volume (mL)
+## 🏗️ Pipeline
 
-Lesion count
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│   Prostate MRI Input (T2W + ADC)                               │
+│          │                                                      │
+│          ▼                                                      │
+│   Ground Truth Segmentation  ←  Medical Decathlon Task05       │
+│          │                                                      │
+│          ▼                                                      │
+│   ┌─────────────────────────────┐                              │
+│   │      Metric Extractor       │                              │
+│   │  • Volume (mL)              │                              │
+│   │  • Zone (PZ / TZ)           │                              │
+│   │  • PI-RADS proxy score      │                              │
+│   │  • Lesion count             │                              │
+│   └──────────────┬──────────────┘                              │
+│                  │                                              │
+│                  ▼                                              │
+│   ┌──────────────────────────────────────────┐                 │
+│   │         Prompt Constructor               │                 │
+│   │   ┌──────────┬───────────┬────────────┐ │                 │
+│   │   │Prompt A  │ Prompt B  │  Prompt C  │ │                 │
+│   │   │(Minimal) │(Structured│(Full-Ctx)  │ │                 │
+│   │   └──────────┴───────────┴────────────┘ │                 │
+│   └──────────────────────────────────────────┘                 │
+│                  │                                              │
+│                  ▼                                              │
+│         LLaMA 3.1  ←  Groq API                                 │
+│                  │                                              │
+│                  ▼                                              │
+│   Structured Radiology Report + Evaluation                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-Per-zone volume (Peripheral / Transition)
+---
 
-PI-RADS-related indicators (based on volume thresholds)
+## 📁 Repository Structure
 
-Prompt Construction – Build prompts using three strategies (Minimal, Structured, Full-Context)
+```
+LASRMIS/
+│
+├── 📓 Lasrmis.ipynb                  # Full pipeline — run this
+│
+├── 📂 data/
+│   └── Task05_Prostate/              # Download separately (see below)
+│       ├── imagesTr/                 # T2W + ADC volumes (.nii.gz)
+│       └── labelsTr/                 # Segmentation masks (.nii.gz)
+│
+├── 📂 outputs/
+│   ├── reports/                      # Generated reports (per case × prompt)
+│   └── evaluation/                   # Completeness scores + readability CSVs
+│
+├── 📂 figures/
+│   ├── pipeline.png                  # Architecture diagram
+│   └── results_chart.png             # Ablation results chart
+│
+└── 📄 README.md
+```
 
-LLM Inference – Generate reports via LLaMA 3.1 (70B) using Groq API (temperature=0, deterministic)
+---
 
-Evaluation – Score reports on:
+## ⚡ Quickstart
 
-Clinical completeness (10-element rubric)
+### 1 — Clone
+```bash
+git clone https://github.com/yourusername/LASRMIS.git
+cd LASRMIS
+```
 
-Flesch Reading Ease / Flesch-Kincaid Grade Level
+### 2 — Install dependencies
+```bash
+pip install nibabel numpy matplotlib textstat groq
+```
 
-Word count analysis
+### 3 — Set your Groq API key
+```bash
+export GROQ_API_KEY="your_key_here"
+```
+> ⚠️ **Do not hardcode your API key in the notebook.** Get a free key at [console.groq.com](https://console.groq.com)
 
-Visualization – Generate architecture diagrams and result plots
+### 4 — Download the dataset
+```bash
+wget http://medicaldecathlon.com/dataaws/Task05_Prostate.tar
+tar -xf Task05_Prostate.tar -C data/
+```
+Or download directly from [medicaldecathlon.com](http://medicaldecathlon.com)
 
-🧪 Prompt Ablation Study
-We systematically evaluate three prompting strategies:
+### 5 — Run the pipeline
+Open `Lasrmis.ipynb` in Jupyter or Google Colab and run all cells.
+The pipeline automatically processes **32 cases × 3 prompts = 96 LLM calls**.
 
-🔹 Prompt A — Minimal
-text
-Segmentation output: Regions: 2 Total volume: 47.297 mL PI-RADS: 5
+---
+
+## 🧪 The Three Prompt Strategies
+
+<details>
+<summary><b>🔴 Prompt A — Minimal</b> &nbsp;|&nbsp; 35.6% completeness &nbsp;(click to expand)</summary>
+
+<br/>
+
+```
+Segmentation output: Regions: 2  Total volume: 47.297 mL  PI-RADS: 5
 Explain this.
-🔹 Prompt B — Structured
-text
-You are a medical AI assistant helping radiologists understand prostate MRI segmentation results.
+```
+
+**Result:** Generic, surface-level output. Misses lesion location, per-region detail, and clinical guidance.
+
+</details>
+
+<details>
+<summary><b>🟡 Prompt B — Structured</b> &nbsp;|&nbsp; 76.9% completeness &nbsp;(click to expand)</summary>
+
+<br/>
+
+```
+You are a medical AI assistant helping radiologists understand
+prostate MRI segmentation results.
 
 Case ID: prostate_00
 Finding: 2 significant region(s) detected
-Total prostate volume: 47.297 mL
-Estimated PI-RADS: 5
-Significant regions:
+Total prostate volume: 47.297 mL  |  Estimated PI-RADS: 5
   - R1: 8.313 mL in peripheral zone
   - R8: 38.928 mL in transition zone
 
 Generate a structured radiology report summary covering:
-1. Key finding 2. Location and volume 3. Clinical significance 4. Recommended next step
-🔹 Prompt C — Full Context
-text
-You are a medical AI assistant supporting radiologists reviewing prostate MRI segmentation outputs.
-Your role is to generate structured, readable summaries — NOT to provide clinical diagnosis.
+1. Key finding
+2. Location and volume
+3. Clinical significance
+4. Recommended next step
+```
 
-IMPORTANT: This output is AI-generated and must be reviewed by a qualified radiologist before any clinical decision.
+**Result:** Zone-specific, per-lesion differentiation. Still missing uncertainty flags and disclaimers.
+
+</details>
+
+<details>
+<summary><b>🟢 Prompt C — Full-Context</b> &nbsp;|&nbsp; 87.8% completeness &nbsp;(click to expand)</summary>
+
+<br/>
+
+```
+You are a medical AI assistant supporting radiologists reviewing
+prostate MRI segmentation outputs. Your role is to generate
+structured, readable summaries — NOT to provide clinical diagnosis.
+
+IMPORTANT: This output is AI-generated and must be reviewed by a
+qualified radiologist before any clinical decision.
 
 --- SEGMENTATION RESULTS ---
 Case ID: prostate_00
@@ -124,269 +218,139 @@ Total prostate volume: 47.297 mL
 Highest PI-RADS estimate: 5/5
 
 Region details:
-  - R1: Volume 8.313 mL | Zone: peripheral zone | PI-RADS estimate: 5 | Highly suspicious PZ lesion
-  - R8: Volume 38.928 mL | Zone: transition zone | PI-RADS estimate: 4 | Suspicious TZ lesion
+  - R1: Volume 8.313 mL | Zone: peripheral zone | PI-RADS: 5 | Highly suspicious
+  - R8: Volume 38.928 mL | Zone: transition zone | PI-RADS: 4 | Suspicious
 
-Note: High PI-RADS score detected. AI confidence is higher but clinical validation is mandatory.
+Note: High PI-RADS score detected. Clinical validation is mandatory.
 ---
 
-Please generate a structured report with these exact sections:
+Sections required:
 1. SUMMARY OF FINDINGS
 2. LESION CHARACTERISTICS
 3. CLINICAL SIGNIFICANCE
 4. UNCERTAINTY FLAGS
 5. RECOMMENDED NEXT STEPS
 
-Use clear, professional radiology language. Keep each section 2-3 sentences.
-📊 Evaluation Results
-Method	Completeness (%)	Readability (Flesch)	Avg. Words
-Minimal (A)	35.6 ± 10.9	39.5 ± 6.1	240.8
-Structured (B)	76.9 ± 8.1	24.5 ± 7.3	191.7
-Full-Context (C)	87.8 ± 5.4	22.2 ± 5.9	207.6
-📈 Key Observations
-Full-Context prompting achieves highest clinical completeness (87.8%) — a 52.2% improvement over Minimal prompting
+Use clear, professional radiology language. 2-3 sentences per section.
+```
 
-Structured prompting (76.9%) substantially outperforms Minimal (35.6%), confirming prompt design is critical
+**Result:** Clinically complete, uncertainty-aware, actionable output across all 10 rubric elements.
 
-Lower Flesch scores (22.2–24.5) for structured prompts reflect appropriate use of clinical terminology, not reduced linguistic quality
+</details>
 
-Word count remains consistent across prompt types (190–240 words), indicating comparable report length
+---
 
-Clinical Completeness Elements (Scored)
-Lesion identification
+## 📋 Sample Output — Prompt C (prostate_00)
 
-Anatomical zone specification
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CASE: prostate_00  |  Generated by LASRMIS  |  Prompt C
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-PI-RADS score inclusion
+  SUMMARY OF FINDINGS
+  Two significant regions detected. Total prostate volume 47.3 mL.
+  Highest PI-RADS estimate 5/5 — high suspicion for clinically
+  significant cancer.
 
-Volume quantification
+  LESION CHARACTERISTICS
+  R1 │ 8.313 mL │ Peripheral zone │ PI-RADS 5 │ Highly suspicious
+  R8 │ 38.928 mL │ Transition zone │ PI-RADS 4 │ Suspicious
 
-Biopsy recommendation
+  CLINICAL SIGNIFICANCE
+  The peripheral zone lesion with PI-RADS 5 warrants immediate
+  clinical attention. The transition zone lesion requires further
+  evaluation given its volume.
 
-Uncertainty acknowledgment
+  UNCERTAINTY FLAGS
+  ⚠  AI-generated — radiologist verification mandatory
+  ⚠  Correlation with patient history and risk factors essential
 
-Comparison context
+  RECOMMENDED NEXT STEPS
+  Targeted biopsy of the peripheral zone lesion is strongly
+  recommended. Discuss in multidisciplinary tumour board.
 
-Clinical significance assessment
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 
-Follow-up guidance
+---
 
-Disclaimer inclusion
+## 📏 Clinical Completeness Rubric
 
-📝 Sample Output (Prompt C - Full Context)
-text
-SUMMARY OF FINDINGS:
-Two significant regions detected in the prostate with a total volume of 47.3 mL. 
-The highest PI-RADS estimate is 5/5, indicating high suspicion for clinically significant cancer.
+Reports are scored against a **10-element checklist** grounded in radiology reporting standards:
 
-LESION CHARACTERISTICS:
-Region R1 measures 8.3 mL and is located in the peripheral zone with PI-RADS 5. 
-Region R2 measures 38.9 mL in the transition zone with PI-RADS 4.
+| # | Element | What it checks |
+|:---:|:---|:---|
+| 1 | Lesion identification | All significant regions correctly identified |
+| 2 | Anatomical zone | PZ / TZ specified per lesion |
+| 3 | PI-RADS inclusion | PI-RADS estimate present and correct |
+| 4 | Volume quantification | Per-lesion volumes reported in mL |
+| 5 | Biopsy recommendation | Suggested when clinically indicated |
+| 6 | Uncertainty acknowledgement | AI limitations explicitly noted |
+| 7 | Comparison context | Reference to prior imaging where relevant |
+| 8 | Clinical significance | Findings interpreted, not just listed |
+| 9 | Follow-up guidance | Specific next steps stated |
+| 10 | Disclaimer inclusion | Safety disclaimer present |
 
-CLINICAL SIGNIFICANCE:
-The peripheral zone lesion (R1) with PI-RADS 5 is highly suspicious and warrants immediate attention.
-The transition zone lesion (R2) with PI-RADS 4 also requires further evaluation.
+Plus **Flesch Reading Ease** and **word count** for linguistic characterisation.
 
-UNCERTAINTY FLAGS:
-AI-generated analysis - requires radiologist verification. High PI-RADS scores detected but 
-clinical correlation with patient history and risk factors is essential.
+---
 
-RECOMMENDED NEXT STEPS:
-Targeted biopsy of the peripheral zone lesion (R1) is strongly recommended.
-Multiparametric MRI findings should be discussed in multidisciplinary tumor board.
-🛠️ Tech Stack
-Component	Technology
-Language	Python 3.8+
-Medical Imaging	NiBabel, NumPy, SciPy
-ML/SciComp	scikit-learn, pandas
-Visualization	matplotlib
-NLP/Evaluation	textstat
-LLM Inference	Groq API (LLaMA 3.1 70B)
-Environment	Jupyter / Google Colab
-🚀 Installation
-bash
-# Clone repository
-git clone https://github.com/yourusername/LASRMIS.git
-cd LASRMIS
+## 🔑 Key Findings
 
-# Install dependencies
-pip install nibabel scipy scikit-learn pandas matplotlib textstat groq python-dotenv jupyter
-🔐 API Configuration
-⚠️ IMPORTANT: Never hardcode API keys
+```
+Prompt A → Prompt B    +41.3 points completeness gain
+Prompt B → Prompt C    +10.9 points completeness gain
+─────────────────────────────────────────────────────
+Total A → C            +52.2 points  (35.6% → 87.8%)
+```
 
-Option 1: Environment Variables (Local)
-bash
-# Create .env file
-echo "GROQ_API_KEY=your_key_here" > .env
-python
-# In Python
-import os
-from dotenv import load_dotenv
-load_dotenv()
-api_key = os.getenv("GROQ_API_KEY")
-Option 2: Google Colab Secrets
-python
-# Use Colab's built-in secrets manager
-from google.colab import userdata
-api_key = userdata.get('GROQ_API_KEY')
-Option 3: Manual Input (Development Only)
-python
-import os
-os.environ["GROQ_API_KEY"] = "your-key-here"  # Never commit this!
-📂 Project Structure
-text
-LASRMIS/
-│
-├── 📓 Lasrmis.ipynb              # Main notebook with complete pipeline
-├── 📄 README.md                   # This file
-├── 📄 LICENSE                     # MIT License
-├── 📄 requirements.txt            # Python dependencies
-├── 📄 .gitignore                   # Files to exclude from git
-│
-├── 📁 src/                         # Modularized code (optional)
-│   ├── feature_extractor.py
-│   ├── prompt_builder.py
-│   ├── report_generator.py
-│   ├── evaluator.py
-│   └── visualizer.py
-│
-├── 📁 config/                      # Configuration files
-│   ├── prompts.yaml
-│   └── evaluation_criteria.yaml
-│
-├── 📁 data/                         # Dataset (not tracked in git)
-│   ├── download_data.py
-│   └── README.md
-│
-├── 📁 results/                      # Generated outputs
-│   ├── reports/
-│   ├── figures/
-│   └── evaluation_results.csv
-│
-├── 📁 examples/                     # Sample outputs
-│   ├── prompt_A_sample.txt
-│   ├── prompt_B_sample.txt
-│   └── prompt_C_sample.txt
-│
-└── 📁 docs/                         # Documentation
-    ├── methodology.md
-    └── paper_abstract.md
-🔬 Research Significance
-LASRMIS makes several contributions to medical AI:
+- The **model is not the bottleneck** — prompt design is
+- Lower Flesch scores in clinical prompts = appropriate medical precision, not worse writing
+- Structured prompts are the most **word-efficient** (191 words avg, highest information density)
+- Identified failure modes: hallucination ~8% · zone confusion ~5% · generic recommendations ~12%
 
-Training-Free Explainability – Demonstrates LLMs as lightweight explainability layers without retraining segmentation models
+---
 
-Prompt Engineering Matters – Quantifies that prompt design (87.8% completeness) is more impactful than model choice for clinical narrative quality
+## 📚 Citation
 
-Reproducible Framework – Provides modular, extensible pipeline for segmentation-to-report translation
-
-Medical NLP Benchmark – Establishes evaluation rubric (10 clinical elements) for LLM-generated radiology reports
-
-Clinical Safety – Incorporates uncertainty flags and disclaimers (Prompt C) essential for medical applications
-
-📚 Citation
 If you use LASRMIS in your research, please cite:
 
-bibtex
-@article{lasrmis2026,
-  title={LASRMIS: LLM-Assisted Structured Reporting from MRI Segmentation — A Prompt Ablation Study on Prostate MRI},
-  author={Your Name},
-  journal={Under Review},
-  year={2026}
+```bibtex
+@inproceedings{lasrmis2025,
+  title     = {LASRMIS: LLM-Assisted Structured Reporting from Medical
+               Image Segmentation -- A Prompt Ablation Study on Prostate MRI},
+  author    = {Your Name and Co-authors},
+  booktitle = {Springer LNCS},
+  year      = {2025}
 }
-For conference paper:
+```
 
-bibtex
-@inproceedings{lasrmis2026,
-  title={LASRMIS: LLM-Assisted Structured Reporting from Medical Image Segmentation},
-  author={Your Name},
-  booktitle={2nd Congress on Intelligent Machines and Algorithms (CIMA 2026)},
-  year={2026},
-  organization={Springer LNNS}
-}
-⚠️ Disclaimer
-IMPORTANT MEDICAL DISCLAIMER
+---
 
-This system:
+## ⚠️ Clinical Disclaimer
 
-Generates AI-assisted summaries of segmentation outputs only
+> This system is a **research prototype** and is not validated for clinical use.
+> All generated reports are AI-assisted outputs and **must be reviewed by a qualified
+> radiologist** before informing any clinical decision. LASRMIS does not perform
+> diagnosis and is not a substitute for professional medical judgement.
 
-Does NOT provide medical diagnosis
+---
 
-Does NOT replace clinical judgment
+## 🙏 Acknowledgements
 
-MUST be reviewed by a qualified radiologist before any clinical use
+- [Medical Segmentation Decathlon](http://medicaldecathlon.com) — Task05 Prostate dataset
+- [Groq](https://groq.com) — Fast LLaMA 3.1 inference
+- [Meta AI](https://ai.meta.com/llama/) — LLaMA 3.1 open model
 
-Is a research tool, not a certified medical device
-
-The authors assume no liability for clinical decisions made using this framework.
-
-🧠 Future Work
-Statistical significance testing (paired t-test between Prompt B and C)
-
-Integration with real PACS systems
-
-Multi-organ segmentation support (brain, chest, liver)
-
-Automated uncertainty quantification
-
-Comparative evaluation with encoder-decoder report generation models
-
-Radiologist preference study / user feedback
-
-Fine-tuned medical LLMs vs. prompted general LLMs
-
-👩‍💻 Author
-Vibhavari Tummewar
-AI/ML Researcher | Medical AI | Prompt Engineering | Explainable AI
-
-🔬 Research Focus: LLM Applications in Healthcare, Medical Image Analysis
-
-📧 Contact: [your.email@example.com]
-
-🔗 LinkedIn: [your-linkedin-profile]
-
-🐦 Twitter: [your-twitter-handle]
-
-🤝 Contributing
-Contributions are welcome! Please:
-
-Fork the repository
-
-Create a feature branch (git checkout -b feature/amazing-feature)
-
-Commit your changes (git commit -m 'Add amazing feature')
-
-Push to branch (git push origin feature/amazing-feature)
-
-Open a Pull Request
-
-See CONTRIBUTING.md for detailed guidelines.
-
-📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-🙏 Acknowledgments
-Medical Segmentation Decathlon for the prostate MRI dataset
-
-Groq for LLM inference API access
-
-Meta for LLaMA 3.1 model
-
-NIT Puducherry for research support
-
-Soft Computing Research Society for conference collaboration
-
-📊 Project Status
-✅ Complete pipeline implemented
-✅ Prompt ablation study conducted
-✅ Quantitative evaluation completed
-✅ Conference paper submitted to CIMA 2026
-✅ Code open-sourced for reproducibility
+---
 
 <div align="center">
-⭐ If you find this work useful, please star the repository!
+<br/>
 
-Report Bug · Request Feature
+*Questions or collaborations → open an issue or reach out at* `your.email@university.edu`
+
+<br/>
+
+⭐ *Star this repo if you find it useful!*
 
 </div>
