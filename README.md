@@ -230,7 +230,7 @@ The model is not the bottleneck — prompt design is.
 @inproceedings{lasrmis2026,
   title     = {LASRMIS: LLM-Assisted Structured Reporting from Medical
                Image Segmentation -- A Prompt Ablation Study on Prostate MRI},
-  author    = {Tummewar, Vibhavari and others},
+  author    = {Vibhavari Tummewar and others},
   booktitle = {Springer LNCS},
   year      = {2026}
 }
