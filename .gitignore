@@ -1,0 +1,8 @@
+data/Task05_Prostate/
+data/metrics/
+data/llm_outputs/
+data/evaluation/
+__pycache__/
+*.pyc
+*.tar
+.DS_Store
